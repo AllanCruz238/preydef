@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preydef — Prevención y Defensa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=block" rel="stylesheet">
+<style>
+/* Block ALL text rendering until fonts are confirmed loaded */
+body { visibility: hidden; }
+body.fonts-ready { visibility: visible; }
+</style>
+<style>
+:root {
+  --red: #cc0000;
+  --red-bright: #e50000;
+  --dark: #080b0f;
+  --dark2: #0e1218;
+  --dark3: #141820;
+  --dark4: #1a2030;
+  --gray: #8a9ab0;
+  --gray-light: #b0bfcf;
+  --white: #f0f4f8;
+  --border-dark: rgba(255,255,255,0.07);
+  --border-red: rgba(204,0,0,0.3);
+  --border-light: rgba(0,0,0,0.09);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--dark);color:var(--white);font-family:'Barlow',sans-serif;overflow-x:hidden;}
+
+/* CANVAS */
+#matrix-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0.07;}
+
+/* NOISE */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:1;opacity:0.35;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;align-items:center;justify-content:space-between;padding:0 5%;height:70px;background:rgba(8,11,15,0.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--border-dark);transition:box-shadow .3s;}
+nav.scrolled{box-shadow:0 2px 40px rgba(204,0,0,0.1);}
+.nav-logo{display:flex;align-items:center;}
+.nav-links{display:flex;gap:2.5rem;list-style:none;}
+.nav-links a{color:var(--gray-light);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:0.85rem;letter-spacing:0.12em;text-transform:uppercase;transition:color .2s;position:relative;}
+.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:2px;background:var(--red);transition:width .25s;}
+.nav-links a:hover{color:var(--white);}
+.nav-links a:hover::after{width:100%;}
+.nav-cta{background:var(--red)!important;color:var(--white)!important;padding:.45rem 1.2rem;border-radius:2px;}
+.nav-cta::after{display:none!important;}
+.nav-cta:hover{background:var(--red-bright)!important;}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(32px);transition:opacity .7s ease,transform .7s ease;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+.reveal-left{opacity:0;transform:translateX(-36px);transition:opacity .7s ease,transform .7s ease;}
+.reveal-left.visible{opacity:1;transform:translateX(0);}
+.reveal-right{opacity:0;transform:translateX(36px);transition:opacity .7s ease,transform .7s ease;}
+.reveal-right.visible{opacity:1;transform:translateX(0);}
+.reveal-scale{opacity:0;transform:scale(.92);transition:opacity .6s ease,transform .6s ease;}
+.reveal-scale.visible{opacity:1;transform:scale(1);}
+.d1{transition-delay:.1s;}.d2{transition-delay:.2s;}.d3{transition-delay:.3s;}.d4{transition-delay:.4s;}.d5{transition-delay:.5s;}
+
+/* ── KEYFRAMES ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes gridPulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes scanLine{0%{top:0;opacity:0}5%{opacity:1}95%{opacity:1}100%{top:100%;opacity:0}}
+@keyframes cornerBlink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes dotsDrift{0%{background-position:0 0}100%{background-position:32px 32px}}
+@keyframes gridScroll{0%{background-position:0 0}100%{background-position:48px 48px}}
+@keyframes certGlow{0%,100%{box-shadow:0 0 0 rgba(204,0,0,0)}50%{box-shadow:0 0 30px rgba(204,0,0,.18)}}
+@keyframes floatUp{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* ════ HERO — WHITE ════ */
+#inicio{min-height:100vh;display:flex;flex-direction:column;padding-top:70px;position:relative;overflow:hidden;background:#fff;}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 50%,rgba(204,0,0,.06) 0%,transparent 70%),radial-gradient(ellipse 40% 60% at 10% 80%,rgba(204,0,0,.03) 0%,transparent 60%),linear-gradient(135deg,#fff 0%,#f5f7fa 100%);z-index:1;}
+.hero-dots{position:absolute;inset:0;z-index:1;pointer-events:none;background-image:radial-gradient(circle,rgba(204,0,0,.13) 1px,transparent 1px);background-size:32px 32px;animation:dotsDrift 18s linear infinite;}
+.hero-grid{position:absolute;inset:0;z-index:1;background-image:linear-gradient(rgba(204,0,0,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(204,0,0,.05) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 70% 70% at 70% 40%,black 0%,transparent 100%);animation:gridPulse 8s ease-in-out infinite;}
+.hero-scan{position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(204,0,0,.35),transparent);z-index:2;animation:scanLine 7s linear infinite;top:0;}
+.corner{position:absolute;width:18px;height:18px;z-index:3;border-color:var(--red);border-style:solid;animation:cornerBlink 4s ease-in-out infinite;}
+.corner-tl{top:80px;left:5%;border-width:2px 0 0 2px;}
+.corner-tr{top:80px;right:0;border-width:2px 2px 0 0;animation-delay:.8s;}
+.corner-bl{bottom:50px;left:5%;border-width:0 0 2px 2px;animation-delay:1.6s;}
+.corner-br{bottom:50px;right:0;border-width:0 2px 2px 0;animation-delay:2.4s;}
+
+.hero-inner{position:relative;z-index:2;display:flex;flex-direction:row;align-items:stretch;flex:1;min-height:calc(100vh - 70px);}
+.hero-content{flex:0 0 55%;padding:4rem 2rem 4rem 5%;display:flex;flex-direction:column;justify-content:center;min-width:0;}
+.hero-photo-wrap{flex:0 0 45%;position:relative;overflow:hidden;}
+.hero-photo-wrap img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center top;}
+
+/* Responsive */
+@media(max-width:900px){
+  .hero-inner{flex-direction:column;}
+  .hero-content{flex:none;width:100%;padding:3rem 5% 2rem;}
+  .hero-photo-wrap{flex:none;width:100%;height:60vw;max-height:420px;position:relative;}
+}
+@media(max-width:480px){
+  .hero-photo-wrap{height:72vw;}
+}
+.hero-tag{display:inline-flex;align-items:center;gap:.5rem;font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--red);letter-spacing:.2em;text-transform:uppercase;margin-bottom:1.5rem;padding:.4rem .8rem;border:1px solid rgba(204,0,0,.25);background:rgba(204,0,0,.04);animation:fadeUp .7s ease both .1s;}
+.hero-tag::before{content:'//';opacity:.6;}
+h1{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:clamp(2.4rem,4.5vw,5.2rem);line-height:1;text-transform:uppercase;letter-spacing:-.01em;color:#000;margin-bottom:.6rem;animation:fadeUp .7s ease both .2s;}
+h1 span{color:var(--red);}
+.hero-slogan{font-family:'Share Tech Mono',monospace;font-size:1rem;color:#333;letter-spacing:.12em;margin-bottom:1.8rem;animation:fadeUp .7s ease both .3s;}
+.hero-slogan::after{content:'|';animation:blink 1s step-end infinite;color:var(--red);}
+.hero-sub{font-size:1.25rem;color:#333;line-height:1.7;max-width:520px;margin-bottom:2.5rem;font-weight:400;animation:fadeUp .7s ease both .4s;}
+.hero-btns{display:flex;gap:1rem;flex-wrap:wrap;animation:fadeUp .7s ease both .5s;}
+.btn-primary{background:var(--red);color:#fff;padding:.85rem 2rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;border:none;cursor:pointer;transition:background .2s,transform .15s,box-shadow .2s;display:inline-block;position:relative;overflow:hidden;}
+.btn-primary::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);transform:translateX(-100%);transition:transform .3s;}
+.btn-primary:hover::after{transform:translateX(0);}
+.btn-primary:hover{background:var(--red-bright);transform:translateY(-2px);box-shadow:0 8px 24px rgba(204,0,0,.3);}
+.btn-secondary{background:transparent;color:#111;padding:.85rem 2rem;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.9rem;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;border:1px solid rgba(0,0,0,.2);cursor:pointer;transition:border-color .2s,color .2s;display:inline-block;}
+.btn-secondary:hover{border-color:var(--red);color:var(--red);}
+.hero-stats{display:flex;gap:3rem;margin-top:4rem;padding-top:2rem;border-top:1px solid rgba(0,0,0,.1);animation:fadeUp .7s ease both .65s;}
+.stat-num{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2.2rem;color:var(--red);line-height:1;}
+.stat-label{font-size:.78rem;color:#666;letter-spacing:.08em;text-transform:uppercase;margin-top:.3rem;}
+.hero-threat-bar{position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;align-items:center;padding:.75rem 5%;background:rgba(204,0,0,.04);border-top:1px solid rgba(204,0,0,.15);font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--red);letter-spacing:.15em;overflow:hidden;}
+.threat-ticker{display:flex;gap:3rem;white-space:nowrap;animation:ticker 25s linear infinite;}
+
+/* ════ NOSOTROS — DARK ════ */
+#nosotros{background:var(--dark2);border-top:1px solid var(--border-dark);border-bottom:1px solid var(--border-dark);padding:6rem 5%;}
+.nosotros-grid{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;max-width:1200px;margin:0 auto;}
+.section-label{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--red);letter-spacing:.25em;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.75rem;}
+.section-label::before{content:'';display:block;width:24px;height:1px;background:var(--red);}
+.section-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:clamp(2rem,4vw,3rem);text-transform:uppercase;line-height:1.05;margin-bottom:1rem;color:var(--white);}
+.section-title span{color:var(--red);}
+.nosotros-text p{color:var(--gray);line-height:1.8;font-size:1rem;margin-bottom:1.2rem;font-weight:300;}
+.nosotros-features{margin-top:2rem;display:flex;flex-direction:column;gap:.9rem;}
+.feature-item{display:flex;align-items:flex-start;gap:1rem;padding:1rem 1.2rem;background:var(--dark3);border-left:2px solid var(--red);transition:background .2s,transform .2s;}
+.feature-item:hover{background:var(--dark4);transform:translateX(4px);}
+.feature-icon{flex-shrink:0;margin-top:.1rem;}
+.feature-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.95rem;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.2rem;color:var(--white);}
+.feature-desc{font-size:.82rem;color:var(--gray);line-height:1.5;}
+.nosotros-visual{position:relative;}
+.info-card{background:var(--dark3);border:1px solid var(--border-dark);padding:2rem;margin-bottom:1.2rem;position:relative;overflow:hidden;transition:border-color .3s,transform .3s;}
+.info-card:hover{border-color:var(--border-red);transform:translateY(-2px);}
+.info-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,var(--red),transparent);}
+.info-card-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--red);margin-bottom:.75rem;}
+.info-card-text{color:var(--gray-light);font-size:.9rem;line-height:1.7;}
+
+/* ════ SERVICIOS — WHITE ════ */
+#servicios{background:#fff;position:relative;overflow:hidden;padding:6rem 5%;}
+#servicios::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(rgba(204,0,0,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(204,0,0,.045) 1px,transparent 1px);background-size:48px 48px;animation:gridScroll 14s linear infinite;}
+#servicios>*{position:relative;z-index:1;}
+.services-header{text-align:center;max-width:600px;margin:0 auto 4rem;}
+.services-header .section-label{justify-content:center;}
+.services-header .section-label::before{display:none;}
+#servicios .section-title{color:#111;}
+#servicios .section-title span{color:var(--red);}
+#servicios .services-header p{color:#555;font-size:.95rem;line-height:1.7;font-weight:300;margin-top:1rem;}
+.services-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;max-width:1100px;margin:0 auto;background:rgba(0,0,0,.12);}
+.service-card{background:#f0f1f3;border:1px solid #d8dadf;padding:2.5rem;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s;position:relative;overflow:hidden;}
+.service-card:hover{background:#e8eaed;transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.10);}
+.service-card::after{content:'';position:absolute;bottom:0;left:0;width:0;height:3px;background:var(--red);transition:width .3s;}
+.service-card:hover::after{width:100%;}
+.service-icon{width:52px;height:52px;background:rgba(204,0,0,.07);border:1.5px solid rgba(204,0,0,.3);display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;transition:background .2s,box-shadow .2s;}
+.service-icon svg{width:22px;height:22px;fill:none;stroke:var(--red);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+.service-card:hover .service-icon{background:rgba(204,0,0,.14);box-shadow:0 0 14px rgba(204,0,0,.15);}
+.service-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.3rem;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.75rem;color:#111;}
+.service-short{color:#555;font-size:.88rem;line-height:1.6;}
+.service-expand-btn{display:inline-flex;align-items:center;gap:.4rem;margin-top:1.2rem;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--red);background:none;border:none;cursor:pointer;padding:0;transition:gap .2s;}
+.service-expand-btn:hover{gap:.8rem;}
+/* all services use red — remove per-color overrides */
+[data-s] .service-icon{background:rgba(204,0,0,.07);border-color:rgba(204,0,0,.3);}
+[data-s] .service-icon svg,[data-s] .service-expand-btn{stroke:var(--red);color:var(--red);}
+[data-s]::after{background:var(--red);}
+[data-s]:hover .service-icon{background:rgba(204,0,0,.14);box-shadow:0 0 14px rgba(204,0,0,.12);}
+
+/* ════ CTA BAND — RED ════ */
+#cta-band{background:var(--red);padding:5rem 5%;text-align:center;position:relative;overflow:hidden;}
+#cta-band::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(0,0,0,.03) 0,rgba(0,0,0,.03) 1px,transparent 1px,transparent 12px);}
+.cta-band-label{font-family:'Share Tech Mono',monospace;font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:1rem;position:relative;z-index:1;}
+.cta-band-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:clamp(2.2rem,5vw,3.8rem);text-transform:uppercase;line-height:1.05;margin-bottom:1.5rem;color:#fff;position:relative;z-index:1;}
+.cta-band-sub{font-size:1rem;color:rgba(255,255,255,.8);max-width:500px;margin:0 auto 2.5rem;line-height:1.7;font-weight:300;position:relative;z-index:1;}
+.btn-white{background:#fff;color:var(--red);padding:.95rem 2.5rem;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:1rem;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;border:none;cursor:pointer;transition:transform .2s,box-shadow .2s;display:inline-block;position:relative;z-index:1;}
+.btn-white:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.25);}
+
+/* ════ CERTIFICADOS — DARK ════ */
+#certificados{background:var(--dark);padding:6rem 5%;text-align:center;}
+#certificados .section-label{justify-content:center;color:var(--red);}
+#certificados .section-label::before{display:none;}
+#certificados .section-title{color:var(--white);}
+#certificados .section-title span{color:var(--red);}
+.cert-highlight{display:inline-block;margin:2rem 0;padding:2rem 4rem;border:1px solid var(--border-red);position:relative;animation:certGlow 3s ease-in-out infinite;}
+.cert-highlight::before,.cert-highlight::after{content:'';position:absolute;width:12px;height:12px;border-color:var(--red);border-style:solid;}
+.cert-highlight::before{top:-1px;left:-1px;border-width:2px 0 0 2px;}
+.cert-highlight::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0;}
+.cert-number{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:5rem;line-height:1;color:var(--red);}
+.cert-label{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:1.1rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gray);margin-top:.5rem;}
+.cert-desc{max-width:550px;margin:2rem auto 0;color:var(--gray);font-size:.95rem;line-height:1.7;font-weight:300;}
+
+/* ════ PARTNERS — WHITE ════ */
+#partners-marcas{background:#fff;border-top:1px solid rgba(0,0,0,.08);position:relative;overflow:hidden;padding:4rem 5%;}
+#partners-marcas::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle,rgba(204,0,0,.09) 1px,transparent 1px);background-size:28px 28px;animation:dotsDrift 20s linear infinite reverse;}
+#partners-marcas>*{position:relative;z-index:1;}
+.pm-header{display:flex;align-items:baseline;gap:1.5rem;flex-wrap:wrap;margin-bottom:3rem;}
+.pm-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;letter-spacing:.05em;color:#111;}
+.pm-title span{color:var(--red);}
+.pm-sub{font-size:.85rem;color:#666;font-weight:300;}
+.partners-top{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:rgba(0,0,0,.08);}
+.partners-bottom{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:rgba(0,0,0,.08);margin-top:1px;max-width:calc(100% * 5/6);margin-left:auto;margin-right:auto;}
+.pcell{background:#fff;padding:1.8rem 1.5rem;display:flex;align-items:center;justify-content:center;min-height:100px;position:relative;overflow:hidden;transition:background .25s,transform .2s;isolation:isolate;}
+.pcell:hover{background:#fff;transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.07);}
+.pcell::after{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;background:var(--red);transition:width .35s;}
+.pcell:hover::after{width:100%;}
+.p-logo{display:flex;align-items:center;justify-content:center;width:100%;height:52px;}
+.p-logo img{max-width:140px;max-height:48px;width:auto;height:auto;object-fit:contain;opacity:1;transition:transform .3s;}
+.pcell:hover .p-logo img{transform:scale(1.06);}
+
+/* ════ CONTACTO — MIXED ════ */
+#contacto{background:linear-gradient(135deg,#0a0d12 0%,#0e1218 55%,#180505 100%);border-top:3px solid var(--red);padding:6rem 5%;}
+.contacto-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;max-width:1100px;margin:0 auto;align-items:start;}
+#contacto .section-label{color:var(--red);}
+#contacto .section-label::before{background:var(--red);}
+#contacto .section-title{color:#fff;}
+#contacto .section-title span{color:var(--red);}
+#contacto>div>p,#contacto .contacto-grid>div>p{color:var(--gray-light);}
+.contact-form{display:flex;flex-direction:column;gap:1.2rem;}
+.form-group{display:flex;flex-direction:column;gap:.4rem;}
+.form-group label{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.45);}
+.form-group input,.form-group textarea{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#fff;padding:.85rem 1rem;font-family:'Barlow',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s,background .2s;resize:none;border-radius:0;}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--red);background:rgba(255,255,255,.07);}
+.form-group input::placeholder,.form-group textarea::placeholder{color:rgba(255,255,255,.25);}
+.form-note{font-size:.75rem;color:rgba(255,255,255,.3);font-style:italic;}
+.contact-info{padding-top:.5rem;}
+.contact-block{margin-bottom:2.5rem;}
+.contact-block-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:var(--red);margin-bottom:1rem;}
+.contact-item{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1rem;padding:1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);transition:border-color .2s,background .2s;}
+.contact-item:hover{border-color:rgba(204,0,0,.4);background:rgba(255,255,255,.07);}
+.contact-item-icon{flex-shrink:0;margin-top:.1rem;}
+.contact-item-label{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:.25rem;}
+.contact-item-value{font-size:.9rem;color:#fff;line-height:1.5;}
+.map-embed{width:100%;height:200px;border:1px solid rgba(255,255,255,.1);filter:grayscale(1) invert(.85) contrast(.9);display:block;margin-top:1rem;}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;align-items:center;justify-content:center;padding:2rem;backdrop-filter:blur(4px);}
+.modal-overlay.active{display:flex;}
+.modal-box{background:#f0f1f3;border:1px solid #d8dadf;max-width:640px;width:100%;padding:3rem;position:relative;max-height:85vh;overflow-y:auto;}
+.modal-box::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:var(--red);}
+.modal-close{position:absolute;top:1.2rem;right:1.2rem;background:none;border:1px solid #d8dadf;color:#666;width:32px;height:32px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:border-color .2s,color .2s;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-tag{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--red);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.75rem;}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:2rem;text-transform:uppercase;margin-bottom:1.5rem;color:#111;}
+.modal-body{color:#444;font-size:.93rem;line-height:1.8;font-weight:300;}
+.modal-body p{margin-bottom:1rem;}
+.modal-list{list-style:none;margin:1rem 0;}
+.modal-list li{padding:.5rem 0;padding-left:1.2rem;position:relative;font-size:.88rem;color:#333;border-bottom:1px solid #d8dadf;}
+.modal-list li::before{content:'▸';position:absolute;left:0;color:var(--red);font-size:.7rem;top:.6rem;}
+
+/* ── FOOTER ── */
+footer{background:var(--dark);border-top:1px solid var(--border-dark);padding:2.5rem 5%;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+.footer-links{display:flex;gap:2rem;list-style:none;}
+.footer-links a{font-size:.78rem;color:var(--gray);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;font-weight:600;transition:color .2s;}
+.footer-links a:hover{color:var(--red);}
+.footer-copy{font-size:.78rem;color:var(--gray);font-family:'Share Tech Mono',monospace;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .nosotros-grid,.contacto-grid{grid-template-columns:1fr;gap:2rem;}
+  .services-grid{grid-template-columns:1fr;}
+  .partners-top{grid-template-columns:repeat(3,1fr);}
+  .partners-bottom{grid-template-columns:repeat(3,1fr);max-width:100%;}
+  .nav-links{display:none;}
+}
+</style>
+</head>
+<body class="fonts-loading">
+<canvas id="matrix-canvas"></canvas>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo">
+    <img src="LOGO_CLEAN.png" alt="Preydef" style="height:38px;width:auto;object-fit:contain;">
+  </div>
+  <ul class="nav-links">
+    <li><a href="#inicio">Inicio</a></li>
+    <li><a href="#nosotros">Nosotros</a></li>
+    <li><a href="#servicios">Servicios</a></li>
+    <li><a href="#partners-marcas">Partners</a></li>
+    <li><a href="#contacto" class="nav-cta">Contacto</a></li>
+  </ul>
+</nav>
+
+<!-- ════ HERO — WHITE ════ -->
+<section id="inicio">
+  <div class="hero-bg"></div>
+  <div class="hero-dots"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-scan"></div>
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-tr"></div>
+  <div class="corner corner-bl"></div>
+  <div class="corner corner-br"></div>
+
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-tag">Prevención y Defensa</div>
+      <h1>Protege a tu empresa<br>con <span style="color:#000;">nosotros</span></h1>
+      <div class="hero-slogan">— Seguridad que impulsa tu negocio</div>
+      <p class="hero-sub">Soluciones especializadas en ciberseguridad para empresas e instituciones. Anticipamos, detectamos y neutralizamos amenazas digitales antes de que afecten tu operación.</p>
+      <div class="hero-btns">
+        <a href="#servicios" class="btn-primary">Ver Servicios</a>
+        <a href="#contacto" class="btn-secondary">Contactar</a>
+      </div>
+      <div class="hero-stats">
+        <div><div class="stat-num" data-count="200" data-sfx="+">0</div><div class="stat-label">Certificaciones</div></div>
+        <div><div class="stat-num" data-count="11">0</div><div class="stat-label">Partners globales</div></div>
+        <div><div class="stat-num" data-count="5">0</div><div class="stat-label">Servicios especializados</div></div>
+      </div>
+    </div>
+    <div class="hero-photo-wrap">
+      <img src="HERO_PHOTO.jpg" alt="Experta en ciberseguridad">
+    </div>
+  </div>
+
+  <div class="hero-threat-bar">
+    <div class="threat-ticker">
+      <span>// THREAT MONITORING ACTIVE</span><span>FIREWALL: ONLINE</span><span>INTRUSION DETECTION: ENABLED</span><span>ENDPOINT PROTECTION: ACTIVE</span><span>VULNERABILITY SCAN: RUNNING</span><span>SIEM CORRELATION: LIVE</span>
+      <span>// THREAT MONITORING ACTIVE</span><span>FIREWALL: ONLINE</span><span>INTRUSION DETECTION: ENABLED</span><span>ENDPOINT PROTECTION: ACTIVE</span><span>VULNERABILITY SCAN: RUNNING</span><span>SIEM CORRELATION: LIVE</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════ NOSOTROS — DARK ════ -->
+<section id="nosotros">
+  <div class="nosotros-grid">
+    <div class="nosotros-text">
+      <div class="section-label reveal">Quiénes somos</div>
+      <h2 class="section-title reveal d1">Expertos en<br><span>seguridad digital</span></h2>
+      <p class="reveal d2">Preydef Consulting es una empresa especializada en ciberseguridad cuyo nombre refleja su esencia: <strong>Prevención y Defensa</strong>. Nació de la necesidad de ofrecer soluciones de seguridad informática integrales, adaptadas a las amenazas del entorno digital actual.</p>
+      <p class="reveal d2">Contamos con un equipo de profesionales altamente certificados, con experiencia en sectores corporativos, financieros, gubernamentales y de infraestructura crítica.</p>
+      <div class="nosotros-features">
+        <div class="feature-item reveal d3">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div><div class="feature-title">Enfoque proactivo</div><div class="feature-desc">Identificamos vulnerabilidades antes de que sean explotadas por actores maliciosos.</div></div>
+        </div>
+        <div class="feature-item reveal d4">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg></div>
+          <div><div class="feature-title">Metodología técnica</div><div class="feature-desc">Aplicamos estándares internacionales como OWASP, NIST, ISO 27001 y MITRE ATT&CK.</div></div>
+        </div>
+        <div class="feature-item reveal d5">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg></div>
+          <div><div class="feature-title">Acompañamiento continuo</div><div class="feature-desc">No solo entregamos reportes — acompañamos a nuestros clientes en todo el proceso de mejora.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="nosotros-visual">
+      <div class="info-card reveal-right d1"><div class="info-card-title">// Misión</div><div class="info-card-text">Brindar servicios de ciberseguridad de clase mundial que protejan los activos digitales de nuestros clientes, a través de soluciones innovadoras, personal certificado y una filosofía centrada en la prevención y defensa activa.</div></div>
+      <div class="info-card reveal-right d2"><div class="info-card-title">// Visión</div><div class="info-card-text">Ser la firma de consultoría en ciberseguridad de referencia en Centroamérica, reconocida por la excelencia técnica, la confianza de nuestros clientes y nuestro compromiso con la seguridad digital.</div></div>
+      <div class="info-card reveal-right d3"><div class="info-card-title">// Valores</div><div class="info-card-text">Integridad · Excelencia técnica · Confidencialidad · Innovación · Compromiso con el cliente</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ SERVICIOS — WHITE ════ -->
+<section id="servicios">
+  <div class="services-header">
+    <div class="section-label reveal" style="justify-content:center;"><span>Lo que hacemos</span></div>
+    <h2 class="section-title reveal d1">Catálogo de <span>servicios</span></h2>
+    <p class="reveal d2">Soluciones de ciberseguridad diseñadas para anticipar, detectar y neutralizar amenazas en entornos corporativos e institucionales.</p>
+  </div>
+  <div class="services-grid">
+    <div class="service-card reveal d1" data-s="c" onclick="openModal('consultoria')">
+      <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+      <div class="service-name">Consultoría</div>
+      <p class="service-short">Asesoría estratégica en seguridad de la información para alinear tu infraestructura con los estándares internacionales.</p>
+      <button class="service-expand-btn">Ver más →</button>
+    </div>
+    <div class="service-card reveal d2" data-s="k" onclick="openModal('capacitaciones')">
+      <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0112 20.055a11.952 11.952 0 01-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg></div>
+      <div class="service-name">Capacitaciones</div>
+      <p class="service-short">Programas de entrenamiento en ciberseguridad para equipos técnicos y no técnicos, adaptados al nivel y contexto de tu organización.</p>
+      <button class="service-expand-btn">Ver más →</button>
+    </div>
+    <div class="service-card reveal d3" data-s="v" onclick="openModal('vulnerability')">
+      <div class="service-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v3m0 3h.01"/></svg></div>
+      <div class="service-name">Vulnerability Assessment</div>
+      <p class="service-short">Evaluación sistemática de vulnerabilidades en sistemas, redes y aplicaciones para identificar y priorizar riesgos antes de ser explotados.</p>
+      <button class="service-expand-btn">Ver más →</button>
+    </div>
+    <div class="service-card reveal d4" data-s="e" onclick="openModal('ethicalhacking')">
+      <div class="service-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="service-name">Ethical Hacking</div>
+      <p class="service-short">Pruebas de penetración controladas que simulan ataques reales para evaluar la resiliencia de tu infraestructura ante amenazas avanzadas.</p>
+      <button class="service-expand-btn">Ver más →</button>
+    </div>
+  </div>
+  <div style="max-width:1100px;margin:1px auto 0;background:rgba(0,0,0,.12);">
+    <div class="service-card reveal" data-s="r" onclick="openModal('rsoc')" style="display:flex;gap:2rem;align-items:center;border:1px solid #d8dadf;">
+      <div class="service-icon" style="flex-shrink:0;"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/><path d="M7 8h.01M11 8h6M7 12h10"/></svg></div>
+      <div style="flex:1;"><div class="service-name">RSOC — Remote Security Operations Center</div><p class="service-short">Monitoreo continuo 24/7 de tu infraestructura digital desde nuestro centro de operaciones remoto.</p></div>
+      <button class="service-expand-btn" style="flex-shrink:0;">Ver más →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ════ CTA — RED ════ -->
+<div id="cta-band">
+  <div class="cta-band-label reveal">// Siguiente paso</div>
+  <h2 class="cta-band-title reveal d1">Protege tu empresa<br>con nosotros</h2>
+  <p class="cta-band-sub reveal d2">Tu negocio no puede esperar. Cada día sin una estrategia de ciberseguridad es un riesgo que no vale la pena correr.</p>
+  <a href="#contacto" class="btn-white reveal d3">Hablar con un experto</a>
+</div>
+
+<!-- ════ CERTIFICADOS — DARK ════ -->
+<section id="certificados">
+  <div class="section-label reveal" style="justify-content:center;"><span>Respaldo técnico</span></div>
+  <h2 class="section-title reveal d1" style="text-align:center;">Nuestras <span>certificaciones</span></h2>
+  <div style="text-align:center;">
+    <div class="cert-highlight reveal-scale d2">
+      <div class="cert-number">200+</div>
+      <div class="cert-label">Certificados Profesionales</div>
+    </div>
+  </div>
+  <p class="cert-desc reveal d3">Nuestro equipo acumula más de 200 certificaciones internacionales en ciberseguridad, abarcando áreas como hacking ético, análisis forense, gestión de riesgos, seguridad en la nube y operaciones de seguridad.</p>
+</section>
+
+<!-- ════ PARTNERS — WHITE ════ -->
+<div id="partners-marcas">
+  <div class="pm-header reveal">
+    <div class="pm-title">Nuestros <span>Partners</span></div>
+    <div class="pm-sub">Trabajamos con las marcas líderes en ciberseguridad a nivel mundial</div>
+  </div>
+
+  <!-- ROW 1: 6 partners -->
+  <div class="partners-top">
+    <div class="pcell reveal d1"><div class="p-logo"><img src="logo_eset.png" alt="ESET"></div></div>
+    <div class="pcell reveal d2"><div class="p-logo"><img src="logo_fortinet.png" alt="Fortinet"></div></div>
+    <div class="pcell reveal d3"><div class="p-logo"><img src="logo_wallix.png" alt="Wallix"></div></div>
+    <div class="pcell reveal d4"><div class="p-logo"><img src="logo_cloudflare.png" alt="Cloudflare"></div></div>
+    <div class="pcell reveal d5"><div class="p-logo"><img src="logo_greenbone.png" alt="Greenbone"></div></div>
+    <div class="pcell reveal d5"><div class="p-logo"><img src="logo_sophos.png" alt="Sophos"></div></div>
+  </div>
+
+  <!-- ROW 2: 5 partners centered -->
+  <div class="partners-bottom">
+    <div class="pcell reveal d1"><div class="p-logo"><img src="logo_veeam.png" alt="Veeam"></div></div>
+    <div class="pcell reveal d2"><div class="p-logo"><img src="logo_sonar.png" alt="SonarQube"></div></div>
+    <div class="pcell reveal d3"><div class="p-logo"><img src="logo_rapid7.png" alt="Rapid7"></div></div>
+    <div class="pcell reveal d4"><div class="p-logo"><img src="logo_netwrix.png" alt="Netwrix"></div></div>
+    <div class="pcell reveal d5"><div class="p-logo"><img src="logo_piran.png" alt="Piran"></div></div>
+  </div>
+</div>
+
+<!-- ════ CONTACTO — MIXED ════ -->
+<section id="contacto">
+  <div class="contacto-grid">
+    <div>
+      <div class="section-label reveal">Hablemos</div>
+      <h2 class="section-title reveal d1">Contacta a<br><span>nuestro equipo</span></h2>
+      <p class="reveal d2" style="color:var(--gray-light);font-size:.9rem;line-height:1.7;margin-bottom:2rem;font-weight:300;">¿Quieres saber cómo podemos proteger tu organización? Déjanos tus datos y te contactaremos a la brevedad.</p>
+      <form class="contact-form reveal d2" onsubmit="handleSubmit(event)">
+        <div class="form-group"><label>Nombre completo</label><input type="text" placeholder="Tu nombre" required></div>
+        <div class="form-group"><label>Correo electrónico</label><input type="email" placeholder="correo@empresa.com" required></div>
+        <div class="form-group"><label>Teléfono</label><input type="tel" placeholder="+502 0000 0000"></div>
+        <div class="form-group"><label>Mensaje</label><textarea rows="5" placeholder="¿En qué podemos ayudarte?" required></textarea></div>
+        <button type="submit" class="btn-primary" style="align-self:flex-start;">Enviar mensaje</button>
+      </form>
+    </div>
+    <div class="contact-info reveal-right">
+      <div class="contact-block">
+        <div class="contact-block-title">// Ubicación</div>
+        <div class="contact-item">
+          <div class="contact-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div>
+            <div class="contact-item-label">Dirección</div>
+            <div class="contact-item-value">Campus Tec I, Zona 4<br>Cuatro Grados Norte, Guatemala<br><span style="color:rgba(255,255,255,.45);font-size:.82rem;">Frente al IGA, 7a. Avenida</span></div>
+          </div>
+        </div>
+        <a href="https://maps.app.goo.gl/2qWRYj7TWFu33kck8" target="_blank" rel="noopener" style="display:block;">
+          <iframe class="map-embed" src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d3861.1!2d-90.514536!3d14.621934!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8589a18592ef21c7%3A0xa83c2cfe7f5cfc83!2sCampus%20Tec%20I!5e0!3m2!1ses!2sgt!4v1700000000002!5m2!1ses!2sgt" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="pointer-events:none;"></iframe>
+        </a>
+        <a href="https://maps.app.goo.gl/2qWRYj7TWFu33kck8" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.5rem;margin-top:.6rem;font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--red);text-decoration:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Ver en Google Maps
+        </a>
+      </div>
+      <div class="contact-block">
+        <div class="contact-block-title">// Contacto directo</div>
+        <div class="contact-item">
+          <div class="contact-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <div><div class="contact-item-label">Email</div><div class="contact-item-value">info@preydef.com</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <img src="LOGO_CLEAN.png" alt="Preydef" style="height:28px;width:auto;object-fit:contain;">
+  <div class="footer-copy">© 2025 PREYDEF CONSULTING — PREYDEF.COM</div>
+  <ul class="footer-links">
+    <li><a href="#inicio">Inicio</a></li>
+    <li><a href="#servicios">Servicios</a></li>
+    <li><a href="#contacto">Contacto</a></li>
+  </ul>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-tag" id="modal-tag"></div>
+    <h3 class="modal-title" id="modal-title"></h3>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── FONT LOADING — block render until ready ──
+if (document.fonts) {
+  document.fonts.ready.then(() => {
+    document.body.classList.add('fonts-ready');
+  });
+  // Safety fallback — show after 2s max regardless
+  setTimeout(() => document.body.classList.add('fonts-ready'), 2000);
+} else {
+  document.body.classList.add('fonts-ready');
+}
+
+// ── MATRIX ──
+(function(){
+  const c=document.getElementById('matrix-canvas'),ctx=c.getContext('2d');
+  const chars='01アイウエオカキNULLVOIDHEX<>{}[]//\\';
+  const arr=chars.split('');let cols,drops;const fs=13;
+  function init(){c.width=innerWidth;c.height=innerHeight;cols=Math.floor(c.width/fs);drops=Array(cols).fill(1);}
+  function draw(){
+    ctx.fillStyle='rgba(8,11,15,0.052)';ctx.fillRect(0,0,c.width,c.height);
+    ctx.font=fs+'px "Share Tech Mono",monospace';
+    for(let i=0;i<drops.length;i++){
+      const ch=arr[Math.floor(Math.random()*arr.length)];
+      const r=Math.random();
+      ctx.fillStyle=r>.94?'#ffffff':r>.7?'#cc0000':'#550000';
+      ctx.fillText(ch,i*fs,drops[i]*fs);
+      if(drops[i]*fs>c.height&&Math.random()>.975)drops[i]=0;
+      drops[i]++;
+    }
+  }
+  init();addEventListener('resize',init);setInterval(draw,42);
+})();
+
+// ── NAV SCROLL ──
+addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',scrollY>60));
+
+// ── REVEAL ──
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:.1});
+document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.reveal-scale').forEach(el=>obs.observe(el));
+
+// ── COUNT UP ──
+const cobs=new IntersectionObserver(entries=>entries.forEach(e=>{
+  if(e.isIntersecting){
+    const t=parseInt(e.target.dataset.count),sfx=e.target.dataset.sfx||'';
+    let s=0;const inc=t/120;
+    const tm=setInterval(()=>{s=Math.min(s+inc,t);e.target.textContent=Math.floor(s)+sfx;if(s>=t)clearInterval(tm);},16);
+    cobs.unobserve(e.target);
+  }
+}),{threshold:.5});
+document.querySelectorAll('[data-count]').forEach(el=>cobs.observe(el));
+
+// ── MODALS ──
+const services={
+  consultoria:{tag:'// Servicio 01',title:'Consultoría en Ciberseguridad',body:`<p>Nuestro servicio de consultoría ayuda a las organizaciones a comprender su postura de seguridad actual y desarrollar una hoja de ruta para mejorarla de manera estructurada y eficiente.</p><p>Trabajamos en estrecha colaboración con los equipos de TI y dirección para alinear las estrategias de seguridad con los objetivos de negocio, cumplimiento normativo y tolerancia al riesgo.</p><ul class="modal-list"><li>Evaluación de madurez en seguridad (gap analysis)</li><li>Diseño de políticas y procedimientos de seguridad</li><li>Asesoría en cumplimiento normativo (ISO 27001, NIST, GDPR)</li><li>Gestión de riesgos y planes de continuidad</li><li>Arquitectura de seguridad y selección de tecnologías</li><li>Acompañamiento en implementación de controles</li></ul>`},
+  capacitaciones:{tag:'// Servicio 02',title:'Capacitaciones',body:`<p>El factor humano sigue siendo el eslabón más débil en la cadena de seguridad. Nuestros programas de capacitación están diseñados para crear una cultura de seguridad sólida a todos los niveles de la organización.</p><ul class="modal-list"><li>Talleres presenciales y virtuales</li><li>Simulaciones de phishing y ataques de ingeniería social</li><li>Entrenamiento en respuesta a incidentes</li><li>Cursos de seguridad para desarrolladores (Secure SDLC)</li><li>Programas de certificación y preparación para exámenes</li><li>Concientización en ciberseguridad para ejecutivos</li></ul>`},
+  vulnerability:{tag:'// Servicio 03',title:'Vulnerability Assessment',body:`<p>Una evaluación de vulnerabilidades proporciona una visión completa de las debilidades presentes en la infraestructura tecnológica de su organización, permitiendo priorizar y remediar riesgos de forma efectiva.</p><ul class="modal-list"><li>Escaneo y análisis de infraestructura de red</li><li>Evaluación de sistemas operativos y servidores</li><li>Revisión de configuraciones y hardening</li><li>Análisis de vulnerabilidades en aplicaciones web</li><li>Evaluación de entornos cloud (AWS, Azure, GCP)</li><li>Reporte ejecutivo y técnico con plan de remediación priorizado</li></ul>`},
+  ethicalhacking:{tag:'// Servicio 04',title:'Ethical Hacking',body:`<p>Las pruebas de penetración simulan ataques reales realizados por actores maliciosos externos e internos, con el objetivo de descubrir y explotar vulnerabilidades antes de que lo haga un atacante real.</p><ul class="modal-list"><li>Pentesting externo de infraestructura y red</li><li>Pruebas de aplicaciones web (OWASP Top 10)</li><li>Pentesting interno y lateral movement</li><li>Ingeniería social y phishing dirigido</li><li>Red Team — simulación de ataque avanzado persistente (APT)</li><li>Entrega de informe técnico y ejecutivo con evidencias</li></ul>`},
+  rsoc:{tag:'// Servicio 05',title:'RSOC — Remote Security Operations Center',body:`<p>Nuestro RSOC proporciona monitoreo continuo 24 horas al día, 7 días a la semana, 365 días al año de toda la infraestructura digital de su organización, sin necesidad de que usted invierta en un SOC propio.</p><ul class="modal-list"><li>Monitoreo 24/7 de logs, eventos y alertas</li><li>Correlación de eventos y detección de anomalías</li><li>Respuesta a incidentes y contención remota</li><li>Threat intelligence y análisis de indicadores de compromiso (IoC)</li><li>Reportes periódicos de postura de seguridad</li><li>Integración con herramientas SIEM/SOAR existentes</li></ul>`}
+};
+function openModal(id){
+  const s=services[id];
+  document.getElementById('modal-tag').textContent=s.tag;
+  document.getElementById('modal-title').textContent=s.title;
+  document.getElementById('modal-body').innerHTML=s.body;
+  document.getElementById('modal-overlay').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('active');document.body.style.overflow='';}
+function closeModalOutside(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+function handleSubmit(e){
+  e.preventDefault();
+  const btn=e.target.querySelector('button[type="submit"]');
+  btn.textContent='Mensaje recibido ✓';btn.style.background='#1a6b2a';
+  setTimeout(()=>{btn.textContent='Enviar mensaje';btn.style.background='';e.target.reset();},3000);
+}
+</script>
+</body>
+</html>
